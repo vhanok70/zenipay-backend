@@ -12,7 +12,7 @@ app.use(express.json());
 // Routes
 app.use("/auth", require("./routes/auth"));
 app.use("/transactions", require("./routes/transactions"));
-
+app.use("/wallet", require("./routes/wallet"));
 // Health check
 app.get("/", (req, res) => {
   res.json({ status: "Zenipay backend running" });
