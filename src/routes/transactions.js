@@ -1,47 +1,76 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
+const auth = require("../middleware/auth");
 const Transaction = require("../models/Transaction");
 const Ledger = require("../models/Ledger");
 
 const router = express.Router();
 
-// JWT middleware
-function auth(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ message: "No token" });
-  try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
-    next();
-  } catch {
-    res.status(401).json({ message: "Invalid token" });
-  }
-}
-
-// CREATE TRANSACTION
+/**
+ * SEND MONEY
+ * Protected route (JWT)
+ */
 router.post("/send", auth, async (req, res) => {
-  const { toMobile, amount } = req.body;
-  if (!toMobile || !amount) return res.status(400).json({ message: "Invalid data" });
+  try {
+    const { toMobile, amount } = req.body;
 
-  const txId = "TXN" + Date.now() + Math.floor(Math.random() * 1000);
+    if (!toMobile || !amount || amount <= 0) {
+      return res.status(400).json({ message: "Invalid data" });
+    }
 
-  const tx = await Transaction.create({
-    txId,
-    from: req.user.mobile,
-    to: toMobile,
-    amount,
-    status: "SUCCESS"
-  });
+    const txnId =
+      "ZP" +
+      Date.now() +
+      crypto.randomBytes(3).toString("hex").toUpperCase();
 
-  await Ledger.create({ mobile: req.user.mobile, txId, debit: amount });
-  await Ledger.create({ mobile: toMobile, txId, credit: amount });
+    const txn = await Transaction.create({
+      txnId,
+      from: req.user.mobile,
+      to: toMobile,
+      amount,
+      status: "SUCCESS"
+    });
 
-  res.json({ message: "Transaction success", txId });
+    // Debit sender
+    await Ledger.create({
+      mobile: req.user.mobile,
+      txnId,
+      debit: amount
+    });
+
+    // Credit receiver
+    await Ledger.create({
+      mobile: toMobile,
+      txnId,
+      credit: amount
+    });
+
+    res.json({
+      message: "Transaction successful",
+      txnId,
+      amount,
+      to: toMobile
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Transaction failed" });
+  }
 });
 
-// TRANSACTION HISTORY
+/**
+ * TRANSACTION HISTORY
+ * Protected route (JWT)
+ */
 router.get("/history", auth, async (req, res) => {
-  const txs = await Transaction.find({ from: req.user.mobile });
-  res.json(txs);
+  try {
+    const txns = await Transaction.find({
+      $or: [{ from: req.user.mobile }, { to: req.user.mobile }]
+    }).sort({ createdAt: -1 });
+
+    res.json(txns);
+  } catch (err) {
+    res.status(500).json({ message: "Unable to fetch history" });
+  }
 });
 
 module.exports = router;
