@@ -1,14 +1,27 @@
 const mongoose = require("mongoose");
 
-const TransactionSchema = new mongoose.Schema({
-  transactionId: { type: String, unique: true, index: true },
-  referenceNo: { type: String, unique: true },
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  type: { type: String, enum: ["UPI", "BANK", "WALLET"] },
-  amount: Number,
-  status: { type: String, enum: ["INITIATED", "OTP_PENDING", "SUCCESS", "FAILED"] },
-  idempotencyKey: { type: String, unique: true },
-  createdAt: { type: Date, default: Date.now }
-});
+const TransactionSchema = new mongoose.Schema(
+  {
+    txnId: { type: String, unique: true, index: true },
+
+    from: { type: String, index: true }, // sender mobile
+    to: { type: String, index: true },   // receiver mobile
+
+    amount: { type: Number, required: true },
+
+    status: {
+      type: String,
+      enum: ["INITIATED", "SUCCESS", "FAILED"],
+      default: "SUCCESS"
+    },
+
+    type: {
+      type: String,
+      enum: ["P2P", "BANK", "UPI"],
+      default: "P2P"
+    }
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Transaction", TransactionSchema);
