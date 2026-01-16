@@ -38,7 +38,7 @@ router.post("/verify-otp", async (req, res) => {
   const { mobile, otp } = req.body;
   if (!mobile || !otp) return res.status(400).json({ message: "Invalid request" });
 
-  const record = await Otp.findOne({ mobile });
+  const record = await Otp.findOne({ mobile, purpose: "LOGIN" });
   if (!record || record.expiresAt < new Date())
     return res.status(400).json({ message: "OTP expired" });
 
@@ -48,7 +48,7 @@ router.post("/verify-otp", async (req, res) => {
   let user = await User.findOne({ mobile });
   if (!user) user = await User.create({ mobile });
 
-  await Otp.deleteMany({ mobile });
+  await Otp.deleteMany({ mobile, purpose: "LOGIN" });
 
   const token = jwt.sign(
     { userId: user._id, mobile: user.mobile },
