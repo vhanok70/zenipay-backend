@@ -1,13 +1,22 @@
 const mongoose = require("mongoose");
 
-const LedgerSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
-  transactionId: { type: String, index: true },
-  entryType: { type: String, enum: ["DEBIT", "CREDIT"] },
-  amount: Number,
-  balanceAfter: Number,
-  narration: String,
-  createdAt: { type: Date, default: Date.now }
-});
+const LedgerSchema = new mongoose.Schema(
+  {
+    mobile: { type: String, index: true, required: true },
+    txnId: { type: String, index: true, required: true },
+
+    entryType: {
+      type: String,
+      enum: ["DEBIT", "CREDIT"],
+      required: true
+    },
+
+    amount: { type: Number, required: true },
+    balanceAfter: { type: Number, required: true },
+
+    narration: String
+  },
+  { timestamps: true }
+);
 
 module.exports = mongoose.model("Ledger", LedgerSchema);
